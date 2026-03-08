@@ -16,6 +16,7 @@
                     <li><a href="{{ route('home') }}">Главная</a></li>
                     <li><a href="{{ route('about') }}">Про нас</a></li>
                     <li><a href="{{ route('posts') }}">Посты</a></li>
+                    <li><a href="{{ route('social.index') }}">Соцсеть</a></li>
                     <li><a href="{{ route('contact') }}">Контакты</a></li>
                 </ul>
             </nav>
