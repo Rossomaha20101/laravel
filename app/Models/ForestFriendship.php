@@ -11,8 +11,8 @@ class ForestFriendship extends Model
     protected $table = 'forest_friendships';
 
     protected $fillable = [
-        'sender_id',
-        'receiver_id',
+        'forest_user_id',  // ✅ Кто отправил заявку
+        'friend_id',       // ✅ Кому отправили
         'status',
     ];
 
@@ -41,33 +41,33 @@ class ForestFriendship extends Model
     }
 
     /**
-     * Связь: Отправитель заявки
+     * Связь: Инициатор заявки (кто отправил)
      */
-    public function sender(): BelongsTo
+    public function user(): BelongsTo  // ← Переименовали для ясности
     {
-        return $this->belongsTo(ForestUser::class, 'sender_id');
+        return $this->belongsTo(ForestUser::class, 'forest_user_id');  // ← Исправлено!
     }
 
     /**
-     * Связь: Получатель заявки
+     * Связь: Друг (кому отправили заявку)
      */
-    public function receiver(): BelongsTo
+    public function friend(): BelongsTo  // ← Переименовали для ясности
     {
-        return $this->belongsTo(ForestUser::class, 'receiver_id');
+        return $this->belongsTo(ForestUser::class, 'friend_id');  // ← Исправлено!
     }
 
     /**
-     * Получить пользователя, противоположного данному
-     * (удобно для отображения в списке друзей)
+     * Получить другого пользователя (не текущего)
+     * Удобно для отображения в списке друзей
      */
-    public function getOtherUser(ForestUser $user): ?ForestUser
+    public function getOtherUser(ForestUser $currentUser): ?ForestUser
     {
-        if ($this->sender_id === $user->id) {
-            return $this->receiver;
+        if ($this->forest_user_id === $currentUser->id) {  // ← Исправлено!
+            return $this->friend;
         }
 
-        if ($this->receiver_id === $user->id) {
-            return $this->sender;
+        if ($this->friend_id === $currentUser->id) {  // ← Исправлено!
+            return $this->user;
         }
 
         return null;
@@ -114,7 +114,7 @@ class ForestFriendship extends Model
 
     public function scopeForUser(Builder $query, int $userId): Builder
     {
-        return $query->where('sender_id', $userId)
-                     ->orWhere('receiver_id', $userId);
+        return $query->where('forest_user_id', $userId)  // ← Исправлено!
+                     ->orWhere('friend_id', $userId);     // ← Исправлено!
     }
 }

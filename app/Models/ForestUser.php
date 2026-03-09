@@ -7,14 +7,12 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection; // ← Добавлен импорт для Collection
 use Laravel\Sanctum\HasApiTokens;
 
 class ForestUser extends Authenticatable
 {
-    //use Notifiable;
     use HasApiTokens, Notifiable;
-
-    //protected $table = 'forest_users';
 
     protected $fillable = [
         'name',
@@ -38,49 +36,139 @@ class ForestUser extends Authenticatable
     ];
 
     /**
-     * Связь: Тип животного (многие-к-одному)
+     * Связь: Тип животного
      */
     public function animalType(): BelongsTo
     {
-        return $this->belongsTo(AnimalType::class);
+        return $this->belongsTo(AnimalType::class, 'animal_type_id');
     }
 
     /**
-     * Связь: Друзья пользователя (многие-ко-многим)
-     * Предполагается таблица-связка: forest_user_friends
+     * Друзья пользователя (статус 'accepted')
+     * Возвращает коллекцию моделей ForestUser
+     * 
+     * @return Collection<int, ForestUser>
      */
-    public function friends(): BelongsToMany
+    public function getFriendsList(): Collection
     {
-        return $this->belongsToMany(
-            ForestUser::class,
-            'forest_friendships',
-            'user_id',
-            'friend_id'
-        )->withTimestamps();
+        // 1. Находим все подтверждённые записи дружбы
+        $friendships = ForestFriendship::where('status', 'accepted')
+            ->where(function($q) {
+                $q->where('forest_user_id', $this->id)
+                ->orWhere('friend_id', $this->id);
+            })
+            ->get();
+        
+        // 2. Собираем ID друзей
+        $friendIds = $friendships->map(function($f) {
+            return $f->forest_user_id == $this->id ? $f->friend_id : $f->forest_user_id;
+        });
+        
+        // 3. Возвращаем пустую коллекцию, если друзей нет
+        if ($friendIds->isEmpty()) {
+            return collect();
+        }
+        
+        // 4. Возвращаем модели друзей
+        return ForestUser::whereIn('id', $friendIds)
+            ->with('animalType')
+            ->get();
     }
 
+    /**
+     * Исходящие заявки на дружбу (я отправил)
+     */
     public function sentFriendRequests(): HasMany
     {
-        return $this->hasMany(ForestFriendship::class, 'sender_id');
+        return $this->hasMany(ForestFriendship::class, 'forest_user_id')
+                    ->where('status', 'pending');
     }
 
+    /**
+     * Входящие заявки на дружбу (мне отправили)
+     */
     public function receivedFriendRequests(): HasMany
     {
-        return $this->hasMany(ForestFriendship::class, 'receiver_id');
+        return $this->hasMany(ForestFriendship::class, 'friend_id')
+                    ->where('status', 'pending');
     }
 
+    /**
+     * Отправленные сообщения
+     */
     public function sentMessages(): HasMany
     {
         return $this->hasMany(ForestMessage::class, 'sender_id');
     }
 
+    /**
+     * Полученные сообщения
+     */
     public function receivedMessages(): HasMany
     {
         return $this->hasMany(ForestMessage::class, 'receiver_id');
     }
 
-    public function recommendations(): HasMany
+    /**
+     * Проверка: является ли $otherUser моим другом
+     */
+    public function isFriendsWith(ForestUser $otherUser): bool
     {
-        return $this->hasMany(Recommendation::class);
+        return ForestFriendship::where('status', 'accepted')
+            ->where(function($q) use ($otherUser) {
+                $q->where('forest_user_id', $this->id)
+                ->where('friend_id', $otherUser->id);
+            })
+            ->orWhere(function($q) use ($otherUser) {
+                $q->where('forest_user_id', $otherUser->id)
+                ->where('friend_id', $this->id);
+            })
+            ->exists();
+    }
+
+    /**
+     * Отправить заявку в друзья
+     */
+    public function sendFriendRequest(ForestUser $friend): ForestFriendship
+    {
+        return ForestFriendship::create([
+            'forest_user_id' => $this->id,
+            'friend_id' => $friend->id,
+            'status' => 'pending',
+        ]);
+    }
+
+    /**
+     * Принять заявку в друзья
+     */
+    public function acceptFriendRequest(ForestUser $friend): bool
+    {
+        $friendship = ForestFriendship::where('forest_user_id', $friend->id)
+            ->where('friend_id', $this->id)
+            ->where('status', 'pending')
+            ->first();
+            
+        if ($friendship) {
+            $friendship->update(['status' => 'accepted']);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Отклонить/заблокировать заявку
+     */
+    public function rejectFriendRequest(ForestUser $friend): bool
+    {
+        $friendship = ForestFriendship::where('forest_user_id', $friend->id)
+            ->where('friend_id', $this->id)
+            ->where('status', 'pending')
+            ->first();
+            
+        if ($friendship) {
+            $friendship->update(['status' => 'blocked']);
+            return true;
+        }
+        return false;
     }
 }

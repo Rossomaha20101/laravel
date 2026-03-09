@@ -3,7 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\PostController;
-use App\Http\Controllers\Web\ForestAuthController; // ← Ваш контроллер для регистрации ForestUser
+use App\Http\Controllers\Web\ForestAuthController;
+use App\Http\Controllers\Api\ForestFriendController; // ← Добавьте этот импорт!
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,7 +14,7 @@ use Illuminate\Support\Facades\Auth;
 |--------------------------------------------------------------------------
 */
 
-// Регистрация (именно эта будет вызываться route('register'))
+// Регистрация
 Route::get('/register', [ForestAuthController::class, 'showRegisterForm'])->name('register');
 Route::post('/register', [ForestAuthController::class, 'register']);
 
@@ -32,12 +33,28 @@ Route::view('/social', 'social.index')->name('social.index');
 
 // Защищённые маршруты соцсети (только для авторизованных ForestUser)
 Route::middleware(['auth.forest'])->group(function () {
+    
+    // Дашборд
     Route::get('/forest/dashboard', function () {
         $user = Auth::guard('forest')->user();
         return view('forest.dashboard', compact('user'));
     })->name('forest.dashboard');
     
-    // Сюда можно добавить маршруты друзей, сообщений и т.д. для веб-версии
+    // 🤝 Друзья (веб-интерфейс) ← ВСТАВИТЬ ВОТ ЭТО
+    Route::prefix('forest/friends')->name('forest.friends.')->group(function () {
+        // Страницы
+        Route::get('/', [ForestFriendController::class, 'friendsPage'])->name('index');
+        Route::get('/requests', [ForestFriendController::class, 'requestsPage'])->name('requests');
+        Route::get('/search', [ForestFriendController::class, 'searchPage'])->name('search');
+        
+        // Действия
+        Route::post('/send', [ForestFriendController::class, 'sendRequestWeb'])->name('send');
+        Route::post('/accept/{id}', [ForestFriendController::class, 'acceptRequestWeb'])->name('accept');
+        Route::post('/reject/{id}', [ForestFriendController::class, 'rejectRequestWeb'])->name('reject');
+        Route::post('/remove/{id}', [ForestFriendController::class, 'removeFriendWeb'])->name('remove');
+    });
+    // 🤝 КОНЕЦ БЛОКА ДРУЗЕЙ
+    
 });
 
 /*

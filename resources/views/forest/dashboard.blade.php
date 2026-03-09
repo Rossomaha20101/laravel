@@ -22,7 +22,7 @@
             
             <nav class="flex items-center gap-4">
                 <span class="text-green-100">
-                    Привет, <strong class="text-white">@{{ $user->nickname }}</strong>! 🦊
+                    Привет, <strong class="text-white">{{ $user->nickname ?? 'лесной_зверь' }}</strong>! 🦊
                 </span>
                 
                 <form method="POST" action="{{ route('forest.logout') }}" class="inline">
@@ -55,13 +55,13 @@
                     <div class="bg-gradient-to-r from-green-400 to-green-600 p-6 text-center">
                         <div class="w-24 h-24 mx-auto bg-white/20 rounded-full flex items-center justify-center text-4xl mb-3">
                             @php
-                                $avatars = ['🦊', '🐻', '🦉', '🐰', '🦔', '🐺', '🦌', '🐿️'];
+                                $avatars = ['🦊', '🐻', '', '🐰', '🦔', '🐺', '', '🐿️'];
                                 $avatar = $avatars[$user->animal_type_id - 1] ?? '🦊';
                             @endphp
                             {{ $avatar }}
                         </div>
                         <h2 class="text-xl font-bold text-white">{{ $user->name }}</h2>
-                        <p class="text-green-100">@{{ $user->nickname }}</p>
+                        <p class="text-green-100">{{ $user->nickname ?? 'без никнейма' }}</p>
                     </div>
                     
                     <!-- Информация -->
@@ -105,5 +105,109 @@
                 <!-- Статистика -->
                 <div class="grid grid-cols-3 gap-4">
                     <div class="bg-white rounded-xl p-4 shadow text-center">
-                        <div class="text-3xl font-bold text-green-600">0</div>
-                        <div class="text-sm text-gray-500">Друзья
+                        <div class="text-3xl font-bold text-green-600">{{ $user->getFriendsList()->count() }}</div>
+                        <div class="text-sm text-gray-500">Друзья</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                        <div class="text-3xl font-bold text-blue-600">0</div>
+                        <div class="text-sm text-gray-500">Сообщения</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                        <div class="text-3xl font-bold text-purple-600">0</div>
+                        <div class="text-sm text-gray-500">Посты</div>
+                    </div>
+                </div>
+
+                <!-- 🔗 НАВИГАЦИЯ: ДРУЗЬЯ -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🤝 Управление друзьями</h3>
+                    
+                    <div class="space-y-3">
+                        <!-- Мои друзья -->
+                        <a href="{{ route('forest.friends.index') }}" 
+                           class="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-xl transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl group-hover:scale-110 transition">👥</span>
+                                <div>
+                                    <p class="font-semibold text-gray-800">Мои друзья</p>
+                                    <p class="text-sm text-gray-500">Список ваших друзей в лесу</p>
+                                </div>
+                            </div>
+                            <span class="bg-green-200 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
+                               {{ $user->getFriendsList()->count() }}
+                            </span>
+                        </a>
+                        
+                        <!-- Входящие заявки -->
+                        <a href="{{ route('forest.friends.requests') }}" 
+                           class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl group-hover:scale-110 transition">📥</span>
+                                <div>
+                                    <p class="font-semibold text-gray-800">Входящие заявки</p>
+                                    <p class="text-sm text-gray-500">Кто хочет добавить вас в друзья</p>
+                                </div>
+                            </div>
+                            @php
+                                $pendingCount = \App\Models\ForestFriendship::where('friend_id', $user->id)
+                                    ->where('status', 'pending')
+                                    ->count();
+                            @endphp
+                            @if($pendingCount > 0)
+                                <span class="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                                    {{ $pendingCount }}
+                                </span>
+                            @else
+                                <span class="text-gray-400 text-sm">0</span>
+                            @endif
+                        </a>
+                        
+                        <!-- Поиск друзей -->
+                        <a href="{{ route('forest.friends.search') }}" 
+                           class="flex items-center justify-between p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl group-hover:scale-110 transition">🔍</span>
+                                <div>
+                                    <p class="font-semibold text-gray-800">Найти новых друзей</p>
+                                    <p class="text-sm text-gray-500">Поиск по имени или никнейму</p>
+                                </div>
+                            </div>
+                            <span class="text-gray-400">→</span>
+                        </a>
+                    </div>
+                </div>
+                <!-- 🔗 КОНЕЦ НАВИГАЦИИ -->
+
+                <!-- Лента активности -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🌟 Ваша активность</h3>
+                    
+                    <div class="text-center py-8 text-gray-500">
+                        <p class="text-4xl mb-3">🍃</p>
+                        <p>Пока нет активности. Начните общаться в лесу!</p>
+                        <button class="mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition">
+                            Найти друзей
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="bg-green-900/80 text-green-100 py-6 mt-12">
+        <div class="max-w-6xl mx-auto px-4 text-center text-sm">
+            <p>© {{ date('Y') }} Волшебный Лес 🌿 Все права защищены</p>
+            <p class="mt-2 text-green-200">
+                <a href="{{ route('home') }}" class="hover:text-white transition">Главная</a>
+                • 
+                <a href="#" class="hover:text-white transition">Правила</a>
+                • 
+                <a href="{{ route('contact') }}" class="hover:text-white transition">Поддержка</a>
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>

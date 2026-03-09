@@ -35,7 +35,9 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // 🤝 Друзья
     Route::get('/friends', [ForestFriendController::class, 'index'])->name('api.friends.index');
+    Route::get('/friends/requests', [ForestFriendController::class, 'requests'])->name('api.friends.requests');
     Route::post('/friends/{id}', [ForestFriendController::class, 'add'])->name('api.friends.add');
+    Route::post('/friends/{id}/accept', [ForestFriendController::class, 'accept'])->name('api.friends.accept');
     Route::delete('/friends/{id}', [ForestFriendController::class, 'remove'])->name('api.friends.remove');
     
     // 💬 Сообщения

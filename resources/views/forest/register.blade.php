@@ -13,8 +13,8 @@
 </div>
 
 <!-- Форма регистрации -->
-<div class="bg-white rounded-2xl shadow-2xl p-8">
-<h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">
+<div class="rounded-2xl shadow-2xl p-8">
+<h3 class="text-2xl font-bold mb-6 text-center">
     🦊 Создать аккаунт
 </h3>
 
@@ -42,7 +42,7 @@
 
         {{-- Имя --}}
         <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="name" class="block text-sm font-medium mb-1">
                 🐾 Ваше имя *
             </label>
             <input 
@@ -62,8 +62,8 @@
 
         {{-- Псевдоним (nickname) --}}
         <div>
-            <label for="nickname" class="block text-sm font-medium text-gray-700 mb-1">
-                🏷️ Псевдоним *
+            <label for="nickname" class="block text-sm font-medium mb-1">
+                🏷️ Псевдоним
             </label>
             <div class="relative">
                 <span class="absolute left-3 top-2 text-gray-400">@</span>
@@ -72,13 +72,12 @@
                     name="nickname" 
                     id="nickname" 
                     value="{{ old('nickname') }}"
-                    required 
                     maxlength="50"
                     class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition @error('nickname') border-red-500 @enderror"
                     placeholder="lisichka"
                 >
             </div>
-            <p class="text-xs text-gray-500 mt-1">Уникальное имя для профиля (например: @lisichka)</p>
+            <p class="text-xs mt-1">Имя для профиля (например: @lisichka)</p>
             @error('nickname')
                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
             @enderror
@@ -86,7 +85,7 @@
 
         {{-- Email --}}
         <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="email" class="block text-sm font-medium mb-1">
                 📧 Email *
             </label>
             <input 
@@ -105,7 +104,7 @@
 
         {{-- Пароль --}}
         <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="password" class="block text-sm font-medium mb-1">
                 🔒 Пароль *
             </label>
             <input 
@@ -124,7 +123,7 @@
 
         {{-- Подтверждение пароля --}}
         <div>
-            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="password_confirmation" class="block text-sm font-medium mb-1">
                 🔑 Подтвердите пароль *
             </label>
             <input 
@@ -140,7 +139,7 @@
 
         {{-- Тип животного --}}
         <div>
-            <label for="animal_type_id" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="animal_type_id" class="block text-sm font-medium mb-1">
                 🦉 Кто вы в лесу? *
             </label>
             <select 
@@ -167,7 +166,7 @@
 
         {{-- Пол --}}
         <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium mb-2">
                 ⚧ Пол *
             </label>
             <div class="flex gap-4">
@@ -180,7 +179,7 @@
                         required
                         class="text-green-600 focus:ring-green-500"
                     >
-                    <span class="text-gray-700"> Девочка</span>
+                    <span> Девочка</span>
                 </label>
                 <label class="flex items-center space-x-2 cursor-pointer">
                     <input 
@@ -191,7 +190,7 @@
                         required
                         class="text-green-600 focus:ring-green-500"
                     >
-                    <span class="text-gray-700">🎩 Мальчик</span>
+                    <span>🎩 Мальчик</span>
                 </label>
             </div>
             @error('gender')
@@ -201,7 +200,7 @@
 
         {{-- Дата рождения --}}
         <div>
-            <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="birth_date" class="block text-sm font-medium mb-1">
                 📅 Дата рождения *
             </label>
             <input 
@@ -220,7 +219,7 @@
 
         {{-- Имя лучшего друга --}}
         <div>
-            <label for="best_friend_name" class="block text-sm font-medium text-gray-700 mb-1">
+            <label for="best_friend_name" class="block text-sm font-medium mb-1">
                 🤝 Имя лучшего друга *
             </label>
             <input 

@@ -15,7 +15,7 @@ class ForestAuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'nickname' => 'required|string|max:50|unique:forest_users',
+            'nickname' => 'nullable|string|max:50|unique:forest_users',
             'email' => 'required|string|email|max:255|unique:forest_users',
             'password' => 'required|string|min:8|confirmed',
             'animal_type_id' => 'required|integer|exists:animal_types,id',
