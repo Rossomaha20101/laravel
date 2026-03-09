@@ -12,6 +12,7 @@
         <div class="max-w-6xl mx-auto px-4 flex justify-between items-center">
             <a href="{{ route('forest.dashboard') }}" class="text-xl font-bold">🌲 Волшебный Лес</a>
             <nav class="flex gap-4">
+                <a href="{{ route('forest.chat.index') }}" class="hover:text-green-200">💬 Чат</a>
                 <a href="{{ route('forest.dashboard') }}" class="hover:text-green-200">Профиль</a>
                 <a href="{{ route('forest.friends.index') }}" class="hover:text-green-200">Друзья</a>
                 <form method="POST" action="{{ route('forest.logout') }}" class="inline">

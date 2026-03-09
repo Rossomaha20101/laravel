@@ -42,7 +42,7 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <a href="#" class="text-sm text-green-600 hover:underline">💬 Написать</a>
+                    <a href="{{ route('forest.chat.conversation', $friend->id) }}" class="text-sm text-green-600 hover:underline">💬 Написать</a>
                     <form method="POST" action="{{ route('forest.friends.remove', $friend->id) }}" class="inline" onsubmit="return confirm('Удалить из друзей?');">
                         @csrf
                         <button type="submit" class="text-sm text-red-500 hover:text-red-700">Удалить</button>

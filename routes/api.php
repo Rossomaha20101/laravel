@@ -30,17 +30,40 @@ Route::middleware('auth:sanctum')->group(function () {
     // Профиль текущего пользователя
     Route::get('/user', [ForestUserController::class, 'profile'])->name('api.user');
     
-    // Рекомендации друзей (по виду животного + полу)
+    // 🌟 Рекомендации друзей (алгоритм из 4 уровней)
     Route::get('/recommendations', [ForestUserController::class, 'recommendations'])->name('api.recommendations');
     
     // 🤝 Друзья
-    Route::get('/friends', [ForestFriendController::class, 'index'])->name('api.friends.index');
-    Route::get('/friends/requests', [ForestFriendController::class, 'requests'])->name('api.friends.requests');
-    Route::post('/friends/{id}', [ForestFriendController::class, 'add'])->name('api.friends.add');
-    Route::post('/friends/{id}/accept', [ForestFriendController::class, 'accept'])->name('api.friends.accept');
-    Route::delete('/friends/{id}', [ForestFriendController::class, 'remove'])->name('api.friends.remove');
+    Route::prefix('friends')->group(function () {
+        Route::get('/', [ForestFriendController::class, 'index'])->name('api.friends.index');
+        Route::get('/requests', [ForestFriendController::class, 'requests'])->name('api.friends.requests');
+        Route::post('/{id}', [ForestFriendController::class, 'add'])->name('api.friends.add');
+        Route::post('/{id}/accept', [ForestFriendController::class, 'accept'])->name('api.friends.accept');
+        Route::delete('/{id}', [ForestFriendController::class, 'remove'])->name('api.friends.remove');
+    });
     
-    // 💬 Сообщения
-    Route::post('/messages', [ForestMessageController::class, 'store'])->name('api.messages.store');
-    Route::get('/messages', [ForestMessageController::class, 'index'])->name('api.messages.index');
+    // 💬 Сообщения (личные)
+    Route::prefix('messages')->group(function () {
+        // Список диалогов
+        Route::get('/conversations', [ForestMessageController::class, 'conversations'])->name('api.messages.conversations');
+        
+        // История переписки с пользователем: /api/messages?with={user_id}
+        Route::get('/', [ForestMessageController::class, 'index'])->name('api.messages.index');
+        
+        // Отправить личное сообщение
+        Route::post('/', [ForestMessageController::class, 'store'])->name('api.messages.store');
+    });
+    
+    // 👥 Групповые чаты
+    Route::prefix('messages/groups')->group(function () {
+        // Мои группы
+        Route::get('/', [ForestMessageController::class, 'myGroups'])->name('api.messages.groups.index');
+        
+        // Создать группу
+        Route::post('/', [ForestMessageController::class, 'createGroup'])->name('api.messages.groups.create');
+        
+        // Сообщения конкретной группы + отправка в группу
+        Route::get('/{id}', [ForestMessageController::class, 'getGroupMessages'])->name('api.messages.groups.show');
+        Route::post('/{id}', [ForestMessageController::class, 'sendToGroup'])->name('api.messages.groups.send');
+    });
 });

@@ -4,7 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\Web\ForestAuthController;
-use App\Http\Controllers\Api\ForestFriendController; // ← Добавьте этот импорт!
+use App\Http\Controllers\Api\ForestFriendController;
+use App\Http\Controllers\Web\ForestChatController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,7 +41,7 @@ Route::middleware(['auth.forest'])->group(function () {
         return view('forest.dashboard', compact('user'));
     })->name('forest.dashboard');
     
-    // 🤝 Друзья (веб-интерфейс) ← ВСТАВИТЬ ВОТ ЭТО
+    // 🤝 Друзья (веб-интерфейс)
     Route::prefix('forest/friends')->name('forest.friends.')->group(function () {
         // Страницы
         Route::get('/', [ForestFriendController::class, 'friendsPage'])->name('index');
@@ -53,10 +54,25 @@ Route::middleware(['auth.forest'])->group(function () {
         Route::post('/reject/{id}', [ForestFriendController::class, 'rejectRequestWeb'])->name('reject');
         Route::post('/remove/{id}', [ForestFriendController::class, 'removeFriendWeb'])->name('remove');
     });
-    // 🤝 КОНЕЦ БЛОКА ДРУЗЕЙ
 
+    // 🌟 Рекомендации
     Route::get('/forest/recommendations', [ForestFriendController::class, 'recommendationsPage'])
         ->name('forest.recommendations');
+    
+    // 💬 Чат (личные и групповые сообщения)
+    Route::prefix('forest/chat')->name('forest.chat.')->group(function () {
+        
+        // Групповые чаты
+        Route::get('/groups', [ForestChatController::class, 'groups'])->name('groups');
+        Route::get('/groups/{id}', [ForestChatController::class, 'groupChat'])->name('group');
+        Route::post('/groups/{id}/send', [ForestChatController::class, 'sendToGroup'])->name('group.send');
+        Route::post('/groups/create', [ForestChatController::class, 'createGroup'])->name('groups.create');
+
+        // Личные сообщения
+        Route::get('/', [ForestChatController::class, 'index'])->name('index');
+        Route::get('/{id}', [ForestChatController::class, 'conversation'])->name('conversation');
+        Route::post('/{id}/send', [ForestChatController::class, 'send'])->name('send');
+    });
     
 });
 

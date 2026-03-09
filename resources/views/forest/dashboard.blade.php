@@ -104,28 +104,63 @@
                 
                 <!-- Статистика -->
                 <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                    <!-- Друзья -->
+                    <a href="{{ route('forest.friends.index') }}" class="block bg-white rounded-xl p-4 shadow text-center hover:shadow-lg transition">
                         <div class="text-3xl font-bold text-green-600">{{ $user->getFriendsList()->count() }}</div>
                         <div class="text-sm text-gray-500">Друзья</div>
-                    </div>
-                    <div class="bg-white rounded-xl p-4 shadow text-center">
-                        <div class="text-3xl font-bold text-blue-600">0</div>
-                        <div class="text-sm text-gray-500">Сообщения</div>
-                    </div>
-                    <div class="bg-white rounded-xl p-4 shadow text-center">
-                        <div class="text-3xl font-bold text-purple-600">0</div>
-                        <div class="text-sm text-gray-500">Посты</div>
-                    </div>
+                    </a>
+                    
+                    <!-- Сообщения (личные) -->
+                    <a href="{{ route('forest.chat.index') }}" class="block bg-white rounded-xl p-4 shadow text-center hover:shadow-lg transition">
+                        @php
+                            // Считаем количество диалогов (уникальных собеседников)
+                            $dialogsCount = \App\Models\ForestMessage::where('type', 'personal')
+                                ->where(function($q) use ($user) {
+                                    $q->where('sender_id', $user->id)
+                                    ->orWhere('recipient_id', $user->id);
+                                })
+                                ->distinct('recipient_id', 'sender_id')
+                                ->count();
+                            // Упрощённый вариант: просто количество последних сообщений
+                            $messagesCount = \App\Models\ForestMessage::where('type', 'personal')
+                                ->where('recipient_id', $user->id)
+                                ->count();
+                        @endphp
+                        <div class="text-3xl font-bold text-blue-600">{{ $dialogsCount }}</div>
+                        <div class="text-sm text-gray-500">Диалоги</div>
+                    </a>
+                    
+                    <!-- Групповые чаты -->
+                    <a href="{{ route('forest.chat.groups') }}" class="block bg-white rounded-xl p-4 shadow text-center hover:shadow-lg transition">
+                        @php
+                            $groupsCount = $user->messageGroups()->count();
+                        @endphp
+                        <div class="text-3xl font-bold text-purple-600">{{ $groupsCount }}</div>
+                        <div class="text-sm text-gray-500">Группы</div>
+                    </a>
                 </div>
 
-                <!-- 🔗 НАВИГАЦИЯ: ДРУЗЬЯ -->
+                <!-- 🔗 НАВИГАЦИЯ: ДРУЗЬЯ И ЧАТ -->
                 <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">🤝 Управление друзьями</h3>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🤝 Друзья и общение</h3>
                     
                     <div class="space-y-3">
-                        <!-- Мои друзья -->
+                        <!-- 💬 Чат: Список диалогов -->
+                        <a href="{{ route('forest.chat.index') }}" 
+                        class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl group-hover:scale-110 transition">💬</span>
+                                <div>
+                                    <p class="font-semibold text-gray-800">Мои диалоги</p>
+                                    <p class="text-sm text-gray-500">Личные сообщения</p>
+                                </div>
+                            </div>
+                            <span class="text-gray-400 group-hover:translate-x-1 transition">→</span>
+                        </a>
+
+                        <!-- 👥 Мои друзья -->
                         <a href="{{ route('forest.friends.index') }}" 
-                           class="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-xl transition group">
+                        class="flex items-center justify-between p-4 bg-green-50 hover:bg-green-100 rounded-xl transition group">
                             <div class="flex items-center gap-3">
                                 <span class="text-3xl group-hover:scale-110 transition">👥</span>
                                 <div>
@@ -134,13 +169,13 @@
                                 </div>
                             </div>
                             <span class="bg-green-200 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
-                               {{ $user->getFriendsList()->count() }}
+                            {{ $user->getFriendsList()->count() }}
                             </span>
                         </a>
                         
-                        <!-- Входящие заявки -->
+                        <!-- 📥 Входящие заявки -->
                         <a href="{{ route('forest.friends.requests') }}" 
-                           class="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition group">
+                        class="flex items-center justify-between p-4 bg-yellow-50 hover:bg-yellow-100 rounded-xl transition group">
                             <div class="flex items-center gap-3">
                                 <span class="text-3xl group-hover:scale-110 transition">📥</span>
                                 <div>
@@ -162,9 +197,9 @@
                             @endif
                         </a>
                         
-                        <!-- Поиск друзей -->
+                        <!-- 🔍 Поиск друзей -->
                         <a href="{{ route('forest.friends.search') }}" 
-                           class="flex items-center justify-between p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition group">
+                        class="flex items-center justify-between p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition group">
                             <div class="flex items-center gap-3">
                                 <span class="text-3xl group-hover:scale-110 transition">🔍</span>
                                 <div>
@@ -172,7 +207,29 @@
                                     <p class="text-sm text-gray-500">Поиск по имени или никнейму</p>
                                 </div>
                             </div>
-                            <span class="text-gray-400">→</span>
+                            <span class="text-gray-400 group-hover:translate-x-1 transition">→</span>
+                        </a>
+
+                        <!-- 👥 Групповые чаты -->
+                        <a href="{{ route('forest.chat.groups') }}" 
+                        class="flex items-center justify-between p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition group">
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl group-hover:scale-110 transition">👥</span>
+                                <div>
+                                    <p class="font-semibold text-gray-800">Групповые чаты</p>
+                                    <p class="text-sm text-gray-500">Общение с несколькими друзьями</p>
+                                </div>
+                            </div>
+                            @php
+                                $myGroups = $user->messageGroups()->count();
+                            @endphp
+                            @if($myGroups > 0)
+                                <span class="bg-indigo-200 text-indigo-800 px-3 py-1 rounded-full text-sm font-bold">
+                                    {{ $myGroups }}
+                                </span>
+                            @else
+                                <span class="text-gray-400 text-sm">0</span>
+                            @endif
                         </a>
                     </div>
                 </div>
@@ -185,9 +242,10 @@
                     <div class="text-center py-8 text-gray-500">
                         <p class="text-4xl mb-3">🍃</p>
                         <p>Пока нет активности. Начните общаться в лесу!</p>
-                        <button class="mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition">
+                        <a href="{{ route('forest.friends.search') }}" 
+                        class="inline-block mt-4 bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition">
                             Найти друзей
-                        </button>
+                        </a>
                     </div>
                 </div>
 

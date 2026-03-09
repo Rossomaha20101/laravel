@@ -7,7 +7,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Collection; // ← Добавлен импорт для Collection
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
 class ForestUser extends Authenticatable
@@ -94,22 +94,6 @@ class ForestUser extends Authenticatable
     }
 
     /**
-     * Отправленные сообщения
-     */
-    public function sentMessages(): HasMany
-    {
-        return $this->hasMany(ForestMessage::class, 'sender_id');
-    }
-
-    /**
-     * Полученные сообщения
-     */
-    public function receivedMessages(): HasMany
-    {
-        return $this->hasMany(ForestMessage::class, 'receiver_id');
-    }
-
-    /**
      * Проверка: является ли $otherUser моим другом
      */
     public function isFriendsWith(ForestUser $otherUser): bool
@@ -171,4 +155,68 @@ class ForestUser extends Authenticatable
         }
         return false;
     }
+
+    /**
+     * Отправленные сообщения (личные)
+     */
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(ForestMessage::class, 'sender_id')
+                    ->where('type', 'personal');
+    }
+
+    /**
+     * Полученные сообщения (личные)
+     */
+    public function receivedMessages(): HasMany
+    {
+        return $this->hasMany(ForestMessage::class, 'recipient_id')
+                    ->where('type', 'personal');
+    }
+
+    /**
+     * Все сообщения (отправленные и полученные)
+     */
+    public function allMessages()
+    {
+        return ForestMessage::where('type', 'personal')
+            ->where(function($q) {
+                $q->where('sender_id', $this->id)
+                  ->orWhere('recipient_id', $this->id);
+            })
+            ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Группы, в которых состоит пользователь
+     */
+    public function messageGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(ForestMessageGroup::class, 'forest_message_group_users', 'user_id', 'group_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Получить диалог с конкретным пользователем
+     */
+    public function getConversationWith(ForestUser $otherUser, int $limit = 50)
+    {
+        return ForestMessage::where('type', 'personal')
+            ->where(function($q) use ($otherUser) {
+                $q->where(function($q2) use ($otherUser) {
+                        $q2->where('sender_id', $this->id)
+                           ->where('recipient_id', $otherUser->id);
+                    })
+                    ->orWhere(function($q2) use ($otherUser) {
+                        $q2->where('sender_id', $otherUser->id)
+                           ->where('recipient_id', $this->id);
+                    });
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+    }
+
 }
