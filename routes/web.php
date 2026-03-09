@@ -54,6 +54,9 @@ Route::middleware(['auth.forest'])->group(function () {
         Route::post('/remove/{id}', [ForestFriendController::class, 'removeFriendWeb'])->name('remove');
     });
     // 🤝 КОНЕЦ БЛОКА ДРУЗЕЙ
+
+    Route::get('/forest/recommendations', [ForestFriendController::class, 'recommendationsPage'])
+        ->name('forest.recommendations');
     
 });
 

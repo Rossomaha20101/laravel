@@ -379,4 +379,26 @@ class ForestFriendController extends Controller
         
         return view('forest.friends.search', compact('users', 'user', 'query'));
     }
+
+    /**
+     * Страница рекомендаций друзей
+     * GET /forest/recommendations
+     */
+    public function recommendationsPage(Request $request)
+    {
+        $user = \Illuminate\Support\Facades\Auth::guard('forest')->user();
+        
+        // Вызываем тот же метод, что и для API
+        $apiRequest = Request::create('/api/recommendations', 'GET');
+        $apiRequest->setUserResolver(fn() => $user);
+        
+        $response = app()->call('App\Http\Controllers\Api\ForestUserController@recommendations', ['request' => $apiRequest]);
+        $data = json_decode($response->getContent(), true);
+        
+        return view('forest.friends.recommendations', [
+            'recommendations' => $data['data'] ?? [],
+            'meta' => $data['meta'] ?? [],
+            'user' => $user,
+        ]);
+    }
 }

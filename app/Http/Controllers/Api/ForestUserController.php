@@ -48,63 +48,177 @@ class ForestUserController extends Controller
             ]
         ], 200);
     }
-    
+
     /**
-     * Get recommended users for friendship
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * Получить рекомендации друзей (алгоритм из 4 уровней)
+     * GET /api/recommendations
      */
     public function recommendations(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user();
+        $bestFriendName = mb_strtolower(trim($user->best_friend_name));
         
-        if (!$user) {
-            return response()->json([
-                'message' => 'Unauthenticated'
-            ], 401);
+        // Исключаем: самого пользователя, уже друзей и тех, кому уже отправлена заявка
+        $friendIds = $user->getFriendsList()->pluck('id')->toArray();
+        $pendingSent = \App\Models\ForestFriendship::where('forest_user_id', $user->id)
+            ->where('status', 'pending')
+            ->pluck('friend_id')
+            ->toArray();
+        $pendingReceived = \App\Models\ForestFriendship::where('friend_id', $user->id)
+            ->where('status', 'pending')
+            ->pluck('forest_user_id')
+            ->toArray();
+        
+        $excludeIds = array_unique(array_merge(
+            [$user->id],
+            $friendIds,
+            $pendingSent,
+            $pendingReceived
+        ));
+
+        $results = [];
+        $level = 0;
+        $rule = '';
+
+        // === УРОВЕНЬ 1: Совпадение по ИМЕНИ с лучшим другом ===
+        $level1 = $this->findSimilarUsers('name', $bestFriendName, $excludeIds);
+        
+        if (count($level1) >= 10) {
+            return $this->formatResponse(array_slice($level1, 0, 10), 1, 'Совпадение имени с именем лучшего друга');
         }
+        $results = array_merge($results, $level1);
+        $excludeIds = array_merge($excludeIds, array_column($level1, 'id'));
+
+        // === УРОВЕНЬ 2: Совпадение по ПРОЗВИЩУ (nickname) ===
+        if (count($results) < 10) {
+            $level2 = $this->findSimilarUsers('nickname', $bestFriendName, $excludeIds);
+            
+            if (count($results) + count($level2) >= 10) {
+                $needed = 10 - count($results);
+                $results = array_merge($results, array_slice($level2, 0, $needed));
+                return $this->formatResponse($results, 2, 'Совпадение прозвища с именем лучшего друга');
+            }
+            $results = array_merge($results, $level2);
+            $excludeIds = array_merge($excludeIds, array_column($level2, 'id'));
+        }
+
+        // === УРОВЕНЬ 3: Тот же вид + противоположный пол ===
+        if (count($results) < 10) {
+            $oppositeGender = $user->gender === 'M' ? 'F' : 'M';
+            
+            $level3 = \App\Models\ForestUser::whereNotIn('id', $excludeIds)
+                ->where('animal_type_id', $user->animal_type_id)
+                ->where('gender', $oppositeGender)
+                ->limit(10 - count($results))
+                ->get()
+                ->toArray();
+            
+            if (count($results) + count($level3) >= 10) {
+                $needed = 10 - count($results);
+                $results = array_merge($results, array_slice($level3, 0, $needed));
+                return $this->formatResponse($results, 3, 'Тот же вид животного + противоположный пол');
+            }
+            $results = array_merge($results, $level3);
+            $excludeIds = array_merge($excludeIds, array_column($level3, 'id'));
+        }
+
+        // === УРОВЕНЬ 4: Просто тот же вид ===
+        if (count($results) < 10) {
+            $level4 = \App\Models\ForestUser::whereNotIn('id', $excludeIds)
+                ->where('animal_type_id', $user->animal_type_id)
+                ->limit(10 - count($results))
+                ->get()
+                ->toArray();
+            
+            $results = array_merge($results, array_slice($level4, 0, 10 - count($results)));
+        }
+
+        return $this->formatResponse($results, 4, 'Тот же вид животного');
+    }
+
+    /**
+     * Вспомогательный метод: поиск пользователей со схожим именем или ником
+     * Использует Levenshtein для расчёта "близости" слов
+     */
+    private function findSimilarUsers(string $column, string $searchTerm, array $excludeIds): array
+    {
+        if (empty($searchTerm)) {
+            return [];
+        }
+
+        // Получаем кандидатов через LIKE для производительности
+        $candidates = \App\Models\ForestUser::whereNotIn('id', $excludeIds)
+            ->whereNotNull($column)
+            ->where($column, 'LIKE', "%{$searchTerm}%")
+            ->get();
+
+        $scored = [];
+
+        foreach ($candidates as $candidate) {
+            $value = mb_strtolower($candidate->$column);
+            
+            // Точное совпадение - максимальный приоритет
+            if ($value === $searchTerm) {
+                $scored[] = [
+                    'id' => $candidate->id,
+                    'name' => $candidate->name,
+                    'nickname' => $candidate->nickname,
+                    'animal_type_id' => $candidate->animal_type_id,
+                    'gender' => $candidate->gender,
+                    'birth_date' => $candidate->birth_date,
+                    'best_friend_name' => $candidate->best_friend_name,
+                    'email' => $candidate->email,
+                    'animalType' => $candidate->animalType,
+                    'similarity' => 1.0,
+                ];
+            } else {
+                // Расчёт расстояния Левенштейна
+                $distance = levenshtein($value, $searchTerm);
+                $maxLen = max(mb_strlen($value), mb_strlen($searchTerm));
+                
+                if ($maxLen > 0) {
+                    $similarity = 1.0 - ($distance / $maxLen);
+                    
+                    // Берём только достаточно похожие (порог 0.6)
+                    if ($similarity >= 0.6) {
+                        $scored[] = [
+                            'id' => $candidate->id,
+                            'name' => $candidate->name,
+                            'nickname' => $candidate->nickname,
+                            'animal_type_id' => $candidate->animal_type_id,
+                            'gender' => $candidate->gender,
+                            'birth_date' => $candidate->birth_date,
+                            'best_friend_name' => $candidate->best_friend_name,
+                            'email' => $candidate->email,
+                            'animalType' => $candidate->animalType,
+                            'similarity' => $similarity,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Сортируем по убыванию схожести
+        usort($scored, fn($a, $b) => $b['similarity'] <=> $a['similarity']);
         
-        $perPage = $request->get('per_page', 10);
-        
-        // Get users with same animal type or compatible types, excluding current user and friends
-        $recommendations = User::where('id', '!=', $user->id)
-            ->whereDoesntHave('friends', function ($query) use ($user) {
-                $query->where(function ($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('friend_id', $user->id);
-                });
-            })
-            ->where(function ($query) use ($user) {
-                // Same animal type or null (any)
-                $query->where('animal_type_id', $user->animal_type_id)
-                      ->orWhereNull('animal_type_id');
-            })
-            ->with(['animalType'])
-            ->paginate($perPage);
-        
+        return $scored;
+    }
+
+    /**
+     * Форматирует ответ JSON
+     */
+    private function formatResponse(array $users, int $level, string $rule): \Illuminate\Http\JsonResponse
+    {
         return response()->json([
             'success' => true,
-            'data' => $recommendations->map(function ($recommendedUser) {
-                return [
-                    'id' => $recommendedUser->id,
-                    'name' => $recommendedUser->name,
-                    'animal_type' => $recommendedUser->animalType ? [
-                        'id' => $recommendedUser->animalType->id,
-                        'name' => $recommendedUser->animalType->name,
-                        'image' => $recommendedUser->animalType->image,
-                    ] : null,
-                    'gender' => $recommendedUser->gender,
-                    'avatar' => $recommendedUser->avatar,
-                ];
-            }),
-            'pagination' => [
-                'current_page' => $recommendations->currentPage(),
-                'per_page' => $recommendations->perPage(),
-                'total' => $recommendations->total(),
-                'last_page' => $recommendations->lastPage(),
+            'data' => $users,
+            'meta' => [
+                'count' => count($users),
+                'level_applied' => $level,
+                'rule' => $rule,
+                'best_friend_name' => \Illuminate\Support\Facades\Auth::guard('sanctum')->user()->best_friend_name,
             ]
-        ], 200);
+        ]);
     }
     
     /**
